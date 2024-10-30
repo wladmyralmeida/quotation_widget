@@ -16,15 +16,16 @@ class MyApp extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Transação'),
           centerTitle: true,
-          backgroundColor: const Color(0xff091F4C),
         ),
-        body: ConfirmarMovimentacaoWidget(),
+        body: const ConfirmarMovimentacaoWidget(),
       ),
     );
   }
 }
 
 class ConfirmarMovimentacaoWidget extends StatefulWidget {
+  const ConfirmarMovimentacaoWidget({super.key});
+
   @override
   _ConfirmarMovimentacaoWidgetState createState() =>
       _ConfirmarMovimentacaoWidgetState();
@@ -69,27 +70,68 @@ class _ConfirmarMovimentacaoWidgetState
     });
   }
 
+  void _showConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmação'),
+          content: const Text('Deseja confirmar a transação?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Transação confirmada!')),
+                );
+              },
+              child: const Text('Confirmar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildTransactionSummary(),
-          const Divider(color: Colors.white),
-          const SizedBox(height: 16),
-          ...currencies.entries.map((entry) {
-            return _buildCurrencyRow(
-              entry.key,
-              entry.value['label'],
-              entry.value['flag'],
-              entry.value['rate'],
-            );
-          }).toList(),
-          const SizedBox(height: 16),
-          _buildActionButtons(context),
-        ],
+    return Center(
+      child: Card(
+        elevation: 8.0,
+        margin: const EdgeInsets.all(16.0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildTransactionSummary(),
+              const Divider(color: Colors.grey),
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16.0,
+                  mainAxisSpacing: 16.0,
+                  childAspectRatio: 0.6,
+                  children: currencies.entries.map((entry) {
+                    String code = entry.key;
+                    String label = entry.value['label'];
+                    String flagPath = entry.value['flag'];
+                    double rate = entry.value['rate'];
+                    return _buildCurrencyBlock(code, label, flagPath, rate);
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildConfirmButton(context),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -102,35 +144,41 @@ class _ConfirmarMovimentacaoWidgetState
       children: [
         _TransactionDetail(label: 'A Pagar', value: '\$100.00'),
         _TransactionDetail(
-            label: 'Total Enviado', value: '\$${totalSent.toStringAsFixed(2)}'),
+            label: 'Pago', value: '\$54.50', color: Colors.green),
+        _TransactionDetail(label: 'Troco', value: '\$52.00', color: Colors.red),
         _TransactionDetail(
-            label: 'Troco', value: '\$${change.toStringAsFixed(2)}'),
+            label: 'Total Enviado', value: '\$${totalSent.toStringAsFixed(2)}'),
       ],
     );
   }
 
-  Widget _buildCurrencyRow(
+  Widget _buildCurrencyBlock(
       String code, String label, String flagPath, double rate) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _buildFlagIcon(flagPath),
-              const SizedBox(width: 8),
-              Text(label, style: const TextStyle(color: Colors.white)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _buildValueInput('Valor em $label', controllers[code]!, rate),
-          const SizedBox(height: 8),
-          _buildCalculatedField('Total em USD', controllers[code]!, rate),
-          const SizedBox(height: 8),
-          _buildSuggestedChangeField('Troco sugerido', rate),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildFlagIcon(flagPath),
+        const SizedBox(height: 8),
+        Text(label, style: const TextStyle(fontSize: 16)),
+        const SizedBox(height: 8),
+        _buildLabeledField('Valor', _buildValueInput(controllers[code]!, rate)),
+        const SizedBox(height: 8),
+        _buildLabeledField(
+            'Total em Dólar', _buildCalculatedField(controllers[code]!, rate)),
+        const SizedBox(height: 8),
+        _buildLabeledField('Troco Sugerido', _buildSuggestedChangeField(rate)),
+      ],
+    );
+  }
+
+  Widget _buildLabeledField(String label, Widget field) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 14)),
+        const SizedBox(height: 4),
+        field,
+      ],
     );
   }
 
@@ -151,75 +199,52 @@ class _ConfirmarMovimentacaoWidgetState
     );
   }
 
-  Widget _buildValueInput(
-      String hint, TextEditingController controller, double rate) {
+  Widget _buildValueInput(TextEditingController controller, double rate) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(
-        hintText: hint,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Colors.grey[200],
       ),
       keyboardType: TextInputType.number,
       onChanged: (value) => _calculateTotal(),
     );
   }
 
-  Widget _buildCalculatedField(
-      String label, TextEditingController controller, double rate) {
+  Widget _buildCalculatedField(TextEditingController controller, double rate) {
     double value = double.tryParse(controller.text) ?? 0;
     double equivalent = value / rate;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        '$label: \$${equivalent.toStringAsFixed(2)}',
-        style: const TextStyle(color: Colors.black),
-      ),
+    return Text(
+      '\$${equivalent.toStringAsFixed(2)}',
+      style: const TextStyle(fontSize: 14),
     );
   }
 
-  Widget _buildSuggestedChangeField(String label, double rate) {
+  Widget _buildSuggestedChangeField(double rate) {
     double change = totalSent - amountDue;
     double suggestedChange = change * rate;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        '$label: ${suggestedChange.toStringAsFixed(2)}',
-        style: const TextStyle(color: Colors.black),
-      ),
+    return Text(
+      '\$${suggestedChange.toStringAsFixed(2)}',
+      style: const TextStyle(fontSize: 14),
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Voltar'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Avançando...')),
-            );
-          },
-          child: const Text('Avançar'),
-        ),
-      ],
+  Widget _buildConfirmButton(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () => _showConfirmationDialog(context),
+      style: ButtonStyle(
+        textStyle: MaterialStateProperty.all(
+            const TextStyle(fontSize: 16, color: Colors.black)),
+      ),
+      child: const Text(
+        'Confirmar',
+        style: TextStyle(color: Colors.black),
+      ),
     );
   }
 }
@@ -227,10 +252,12 @@ class _ConfirmarMovimentacaoWidgetState
 class _TransactionDetail extends StatelessWidget {
   final String label;
   final String value;
+  final Color? color;
 
   const _TransactionDetail({
     required this.label,
     required this.value,
+    this.color,
   });
 
   @override
@@ -238,8 +265,9 @@ class _TransactionDetail extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 18)),
-        Text(value, style: const TextStyle(color: Colors.green, fontSize: 18)),
+        Text(label, style: const TextStyle(fontSize: 18)),
+        Text(value,
+            style: TextStyle(fontSize: 18, color: color ?? Colors.black)),
       ],
     );
   }
