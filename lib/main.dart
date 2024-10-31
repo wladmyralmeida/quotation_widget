@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'payment_forms/payment_by_account.dart';
+import 'payment_forms/payment_by_cash.dart';
+import 'payment_forms/payment_by_installments.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,78 +40,9 @@ class ConfirmarMovimentacaoWidget extends StatefulWidget {
 
 class _ConfirmarMovimentacaoWidgetState
     extends State<ConfirmarMovimentacaoWidget> {
-  final Map<String, dynamic> currencies = {
-    'USD': {'label': 'Dólar', 'flag': 'assets/eua.png', 'rate': 1.0},
-    'BRL': {'label': 'Real', 'flag': 'assets/br.png', 'rate': 5.0},
-    'PYG': {'label': 'Guarani', 'flag': 'assets/gua.png', 'rate': 7000.0},
-  };
-
-  final Map<String, TextEditingController> controllers = {};
+  String? _selectedPaymentType = 'Dinheiro';
   double totalSent = 0.0;
   double amountDue = 100.0;
-
-  String? _selectedPaymentType = 'Dinheiro'; // Valor inicial
-  TextEditingController _transactionNumberController = TextEditingController();
-  TextEditingController _installmentController = TextEditingController();
-  TextEditingController _dueDateController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    currencies.forEach((key, _) {
-      controllers[key] = TextEditingController();
-    });
-  }
-
-  @override
-  void dispose() {
-    controllers.forEach((_, controller) => controller.dispose());
-    _transactionNumberController.dispose();
-    _installmentController.dispose();
-    _dueDateController.dispose();
-    super.dispose();
-  }
-
-  void _calculateTotal() {
-    double total = 0.0;
-    currencies.forEach((key, value) {
-      double rate = value['rate'];
-      double amount = double.tryParse(controllers[key]?.text ?? '0') ?? 0;
-      total += amount / rate;
-    });
-
-    setState(() {
-      totalSent = total;
-    });
-  }
-
-  void _showConfirmationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirmação'),
-          content: Text(
-              'Você selecionou o método de pagamento: $_selectedPaymentType. Deseja confirmar a transação?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Transação confirmada!')),
-                );
-              },
-              child: const Text('Confirmar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -125,14 +59,18 @@ class _ConfirmarMovimentacaoWidgetState
             children: [
               _buildTransactionSummary(),
               const Divider(color: Colors.grey),
-              _buildPaymentOptions(), // Tipos de pagamento
+              _buildPaymentOptions(),
               const Divider(color: Colors.grey),
-              Expanded(
-                child:
-                    _buildConditionalFields(), // Exibe os campos com base na seleção
-              ),
+              Expanded(child: _buildConditionalFields()),
               const SizedBox(height: 16),
-              _buildConfirmButton(context),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                onPressed: () => _showConfirmationDialog(context),
+                child: const Text(
+                  'Realizar Venda',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
             ],
           ),
         ),
@@ -146,10 +84,13 @@ class _ConfirmarMovimentacaoWidgetState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _TransactionDetail(label: 'A Pagar', value: '\$100.00'),
-        _TransactionDetail(
+        const _TransactionDetail(label: 'A Pagar', value: '\$100.00'),
+        const _TransactionDetail(
             label: 'Pago', value: '\$54.50', color: Colors.green),
-        _TransactionDetail(label: 'Troco', value: '\$52.00', color: Colors.red),
+        _TransactionDetail(
+            label: 'Troco',
+            value: '\$${change.toStringAsFixed(2)}',
+            color: Colors.red),
         _TransactionDetail(
             label: 'Total Enviado', value: '\$${totalSent.toStringAsFixed(2)}'),
       ],
@@ -185,149 +126,45 @@ class _ConfirmarMovimentacaoWidgetState
   }
 
   Widget _buildConditionalFields() {
-    if (_selectedPaymentType == 'Conta') {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Número da Transação'),
-          TextField(
-            controller: _transactionNumberController,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ],
-      );
-    } else if (_selectedPaymentType == 'A Prazo') {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Número de Parcelas'),
-          TextField(
-            controller: _installmentController,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text('Vencimento'),
-          TextField(
-            controller: _dueDateController,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ],
-      );
-    } else {
-      return _buildCurrencyGrid(); // Exibe o grid completo para pagamento em dinheiro
+    switch (_selectedPaymentType) {
+      case 'Conta':
+        return PaymentByAccount();
+      case 'A Prazo':
+        return PaymentByInstallments();
+      default:
+        return PaymentByCash(onTotalChange: (newTotal) {
+          setState(() {
+            totalSent = newTotal;
+          });
+        });
     }
   }
 
-  Widget _buildCurrencyGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 16.0,
-      mainAxisSpacing: 16.0,
-      childAspectRatio: 0.6,
-      children: currencies.entries.map((entry) {
-        String code = entry.key;
-        String label = entry.value['label'];
-        String flagPath = entry.value['flag'];
-        double rate = entry.value['rate'];
-        return _buildCurrencyBlock(code, label, flagPath, rate);
-      }).toList(),
-    );
-  }
-
-  Widget _buildCurrencyBlock(
-      String code, String label, String flagPath, double rate) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _buildFlagIcon(flagPath),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontSize: 16)),
-        const SizedBox(height: 8),
-        _buildLabeledField('Valor', _buildValueInput(controllers[code]!, rate)),
-        const SizedBox(height: 8),
-        _buildLabeledField(
-            'Total em Dólar', _buildCalculatedField(controllers[code]!, rate)),
-        const SizedBox(height: 8),
-        _buildLabeledField('Troco Sugerido', _buildSuggestedChangeField(rate)),
-      ],
-    );
-  }
-
-  Widget _buildLabeledField(String label, Widget field) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 14)),
-        const SizedBox(height: 4),
-        field,
-      ],
-    );
-  }
-
-  Widget _buildFlagIcon(String flagPath) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
-        color: Colors.white,
-      ),
-      child: Image.asset(
-        flagPath,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) =>
-            const Icon(Icons.flag, color: Colors.grey),
-      ),
-    );
-  }
-
-  Widget _buildValueInput(TextEditingController controller, double rate) {
-    return TextField(
-      controller: controller,
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
-      ),
-      keyboardType: TextInputType.number,
-      onChanged: (value) => _calculateTotal(),
-    );
-  }
-
-  Widget _buildCalculatedField(TextEditingController controller, double rate) {
-    double value = double.tryParse(controller.text) ?? 0;
-    double equivalent = value / rate;
-
-    return Text(
-      '\$${equivalent.toStringAsFixed(2)}',
-      style: const TextStyle(fontSize: 14),
-    );
-  }
-
-  Widget _buildSuggestedChangeField(double rate) {
-    double change = totalSent - amountDue;
-    double suggestedChange = change * rate;
-
-    return Text(
-      'Troco: \$${suggestedChange.toStringAsFixed(2)}',
-      style: const TextStyle(fontSize: 14),
-    );
-  }
-
-  Widget _buildConfirmButton(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.green,
-      ),
-      onPressed: () => _showConfirmationDialog(context),
-      child: const Text(
-        'Realizar Venda',
-        style: TextStyle(fontSize: 18, color: Colors.white),
-      ),
+  void _showConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmação'),
+          content: Text(
+              'Você selecionou o método de pagamento: $_selectedPaymentType. Deseja confirmar a transação?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Transação confirmada!')),
+                );
+              },
+              child: const Text('Confirmar'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
