@@ -14,35 +14,49 @@ class PaymentByAccount extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
-              Text("Número da Conta",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              Spacer(),
-              Text("Número da Transação",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
+          Column(
             children: [
-              Expanded(
-                child: TextField(
-                  controller: accountNumberController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Obrigatório',
+              const Text("Número da Conta",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: accountNumberController,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.account_balance,
+                      color: Colors.blueAccent),
+                  labelText: 'Obrigatório',
+                  labelStyle: const TextStyle(color: Colors.blueGrey),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.blueAccent),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: transactionNumberController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: 'Opcional',
+              const SizedBox(height: 22),
+              const Text("Número da Transação",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: transactionNumberController,
+                decoration: InputDecoration(
+                  prefixIcon:
+                      const Icon(Icons.receipt_long, color: Colors.blueAccent),
+                  labelText: 'Opcional',
+                  labelStyle: const TextStyle(color: Colors.blueGrey),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.blueAccent),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                 ),
               ),
             ],

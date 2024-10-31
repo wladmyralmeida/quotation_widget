@@ -28,7 +28,6 @@ class _PaymentByCashState extends State<PaymentByCash> {
   @override
   void initState() {
     super.initState();
-    // Criando controladores independentes para cada campo de valor e troco
     currencies.forEach((key, _) {
       controllers[key] = TextEditingController();
       changeControllers[key] = TextEditingController();
@@ -37,7 +36,6 @@ class _PaymentByCashState extends State<PaymentByCash> {
 
   @override
   void dispose() {
-    // Garantindo que cada controlador seja descartado corretamente
     controllers.forEach((_, controller) => controller.dispose());
     changeControllers.forEach((_, controller) => controller.dispose());
     super.dispose();
@@ -93,8 +91,6 @@ class _PaymentByCashState extends State<PaymentByCash> {
             }).toList(),
           ),
         ),
-        const Divider(),
-        _buildSummarySection(),
       ],
     );
   }
@@ -112,7 +108,25 @@ class _PaymentByCashState extends State<PaymentByCash> {
               const SizedBox(width: 8),
               Text('$label', style: const TextStyle(fontSize: 16)),
               Text(
-                  ' - ${code == 'USD' ? '\$' : code == 'BRL' ? 'R\$' : 'Gs'} $rate'),
+                ' - ${code == 'USD' ? '\$' : code == 'BRL' ? 'R\$' : 'Gs'} $rate',
+              ),
+              Container(
+                decoration: const BoxDecoration(color: Colors.grey),
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+                width: 0.5,
+                height: 15,
+              ),
+              Flexible(
+                child: Text(
+                  textAlign: TextAlign.center,
+                  'Total em Dólar: \$${_calculateTotalInDollar(code).toStringAsFixed(2)}',
+                  softWrap: true,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -126,16 +140,6 @@ class _PaymentByCashState extends State<PaymentByCash> {
               Expanded(
                 child: _buildLabeledField(
                     'Troco', _buildChangeInput(changeControllers[code]!)),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildLabeledField(
-                  'Total em Dólar',
-                  Text(
-                    '\$${_calculateTotalInDollar(code).toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ),
               ),
             ],
           ),
@@ -197,38 +201,6 @@ class _PaymentByCashState extends State<PaymentByCash> {
       ),
       keyboardType: TextInputType.number,
       onChanged: (value) => _calculateTotals(),
-    );
-  }
-
-  Widget _buildSummarySection() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: currencies.entries.map((entry) {
-          String code = entry.key;
-          String label = entry.value['label'];
-          double amountSent =
-              double.tryParse(controllers[code]?.text ?? '0') ?? 0;
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Valor enviado em $label',
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  '${code == 'USD' ? '\$' : code == 'BRL' ? 'R\$' : 'Gs'} ${amountSent.toStringAsFixed(2)}',
-                  style: const TextStyle(color: Colors.green, fontSize: 14),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
     );
   }
 }
