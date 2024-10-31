@@ -42,7 +42,22 @@ class _ConfirmarMovimentacaoWidgetState
     extends State<ConfirmarMovimentacaoWidget> {
   String? _selectedPaymentType = 'Dinheiro';
   double totalSent = 0.0;
+  double totalChange = 0.0;
   double amountDue = 100.0;
+
+  // Função para atualizar o total enviado
+  void _updateTotalSent(double newTotal) {
+    setState(() {
+      totalSent = newTotal;
+    });
+  }
+
+  // Função para atualizar o total de troco
+  void _updateTotalChange(double newTotalChange) {
+    setState(() {
+      totalChange = newTotalChange;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,20 +94,25 @@ class _ConfirmarMovimentacaoWidgetState
   }
 
   Widget _buildTransactionSummary() {
-    double change = totalSent - amountDue;
+    double change = totalSent -
+        amountDue; // Calcular troco total com base no total enviado e a pagar
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _TransactionDetail(label: 'A Pagar', value: '\$100.00'),
-        const _TransactionDetail(
-            label: 'Pago', value: '\$54.50', color: Colors.green),
+        _TransactionDetail(
+            label: 'A Pagar', value: '\$${amountDue.toStringAsFixed(2)}'),
+        _TransactionDetail(
+            label: 'Pago',
+            value: '\$${totalSent.toStringAsFixed(2)}',
+            color: Colors.green),
         _TransactionDetail(
             label: 'Troco',
-            value: '\$${change.toStringAsFixed(2)}',
+            value: '\$${totalChange.toStringAsFixed(2)}',
             color: Colors.red),
         _TransactionDetail(
-            label: 'Total Enviado', value: '\$${totalSent.toStringAsFixed(2)}'),
+            label: 'Total Enviado',
+            value: '\$${(totalSent - totalChange).toStringAsFixed(2)}'),
       ],
     );
   }
@@ -132,11 +152,11 @@ class _ConfirmarMovimentacaoWidgetState
       case 'A Prazo':
         return PaymentByInstallments();
       default:
-        return PaymentByCash(onTotalChange: (newTotal) {
-          setState(() {
-            totalSent = newTotal;
-          });
-        });
+        return PaymentByCash(
+          onTotalChange: _updateTotalSent,
+          onTotalChangeForChange:
+              _updateTotalChange, // Passar callback para atualizar o troco total
+        );
     }
   }
 

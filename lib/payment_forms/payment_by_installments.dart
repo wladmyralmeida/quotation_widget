@@ -11,6 +11,20 @@ class PaymentByInstallments extends StatefulWidget {
 class _PaymentByInstallmentsState extends State<PaymentByInstallments> {
   int installments = 1;
   DateTime dueDate = DateTime.now().add(const Duration(days: 30));
+  final TextEditingController installmentsController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicializamos o controlador com o valor inicial de parcelas
+    installmentsController.text = installments.toString();
+  }
+
+  @override
+  void dispose() {
+    installmentsController.dispose();
+    super.dispose();
+  }
 
   void _updateDueDate() {
     setState(() {
@@ -25,8 +39,8 @@ class _PaymentByInstallmentsState extends State<PaymentByInstallments> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Text("Número de Parcelas",
                   style: TextStyle(fontWeight: FontWeight.bold)),
               Spacer(),
@@ -44,14 +58,14 @@ class _PaymentByInstallmentsState extends State<PaymentByInstallments> {
                       onPressed: () {
                         setState(() {
                           if (installments > 1) installments--;
+                          installmentsController.text = installments.toString();
                           _updateDueDate();
                         });
                       },
                     ),
                     Expanded(
                       child: TextField(
-                        controller: TextEditingController(
-                            text: installments.toString()),
+                        controller: installmentsController,
                         keyboardType: TextInputType.number,
                         onChanged: (value) {
                           int? newValue = int.tryParse(value);
@@ -72,6 +86,7 @@ class _PaymentByInstallmentsState extends State<PaymentByInstallments> {
                       onPressed: () {
                         setState(() {
                           installments++;
+                          installmentsController.text = installments.toString();
                           _updateDueDate();
                         });
                       },
